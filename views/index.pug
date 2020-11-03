@@ -1,0 +1,26 @@
+doctype html
+html
+  include head.pug
+  script
+    include register.js
+    include timing.js
+  body
+    form(action='/add_movie', method='POST')
+      p
+        | Name: 
+        input(name='Name', id='#name', value='', type='text')
+        | Surname: 
+        input(name='Surname', id='#surname', value='', type='text')
+        | Email: 
+        input(name='Email', id='#email', value='', type='text')
+        | Password:
+        input(name='Password', id='#password', value='', type='text')
+        - var btnType = 'info'
+        - var btnSize = 'lg'
+        button(id='registerBtn' type='button' class='btn btn-' + btnType + ' btn-' + btnSize) Register
+        |
+      ul(id='emailsToTest')
+        li davegrohl@yandex.com
+        li kurtcobain@yandex.com
+        li kristnovoselic@yandex.com
+        li patsmear@yandex.com
