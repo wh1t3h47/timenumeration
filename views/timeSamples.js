@@ -88,7 +88,7 @@ function getTimingSamples(useResourcesApi) {
     // all requests are done (as they append to the array when
     // finished and timingSamples is total requests amount
     doneRequests += 1;
-    console.log(doneRequests);
+    // console.log(doneRequests);
     if (doneRequests < timingSamples) {
       return;
     }
@@ -128,7 +128,7 @@ function getTimingSamples(useResourcesApi) {
     prepareNextExecution();
     const delta = existingUserAvg - invalidUserAvg;
     console.log(timingExistingUser.length);
-    console.log(delta);
+    console.log(`timing delta = ${delta}`);
   };
 
   const fire = (user, storeTiming) => {
@@ -151,9 +151,11 @@ function getTimingSamples(useResourcesApi) {
   };
 
   // checkSupport returns false if resourcesApi is not supported
-  if (useResourcesApi) useResourcesApi = checkSupport();
-  if (useResourcesApi) {
-    initPerformance();
+  if (useResourcesApi) { 
+    useResourcesApi = checkSupport();
+    if (useResourcesApi) {
+      initPerformance();
+    }
   }
 
   fire("tom.mharres@gmail.com", timingExistingUser);
