@@ -1,28 +1,5 @@
 /* eslint-env browser */
 
-function createTestUser(attempts = 3) {
-  const TestUser = [
-    "Antonio",
-    "Martos Harres",
-    "tom.mharres@gmail.com",
-    "12345678", // Sorry, I can't choose a better password
-  ];
-
-  let resultHandler = (succeed) => {
-    if (succeed) {
-      return;
-    } else {
-      if (attempts > 1) {
-        attempts -= 1;
-        createTestUser(attempts);
-        return;
-      }
-    }
-  };
-
-  sendApiSignUp(TestUser, resultHandler); // eslint-disable-line no-undef
-}
-
 function randomPass(length) {
   // We use a random pass to avoid hitting cache in bcrypt
   // hashing the same string over and over might get
@@ -40,7 +17,7 @@ function randomPass(length) {
 function sendApiLogin(
   email,
   password,
-  usePerformanceApi,
+  useResourcesApi,
   updateRequestsCallback,
   timingArray
 ) {
@@ -58,11 +35,12 @@ function sendApiLogin(
     },
   ];
 
-  if (usePerformanceApi) {
+  if (useResourcesApi) {
     fetch(...requestParams).then(() => {
       updateRequestsCallback();
     });
   } else {
+    // start will be calculated in the end (to be more precise)
     let start;
     fetch(...requestParams)
       .then(() => {
@@ -91,10 +69,11 @@ function returnAvg(timingArray, timingSamples) {
   return avg / timingSamples;
 }
 
-function getTimingSamples(usePerformanceApi) {
+function getTimingSamples(useResourcesApi) {
   createTestUser(1); // TODO: Check if user exist already
-  const timingSamples = 200;
-  const delayBetweenRequests = 5;
+
+  const timingSamples = 20;
+  const delayBetweenRequests = 5 + !useResourcesApi * 50;
   let doneRequests = 0;
   let timingExistingUser = [];
   let timingInvalidUser = [];
@@ -104,46 +83,52 @@ function getTimingSamples(usePerformanceApi) {
     return randomPass(30);
   });
 
-  let waitRequestsCompletion;
   const checkRequestsCompleted = () => {
     // This function will run from time to time to verify when
     // all requests are done (as they append to the array when
     // finished and timingSamples is total requests amount
     doneRequests += 1;
+    console.log(doneRequests);
     if (doneRequests < timingSamples) {
       return;
     }
-    if (usePerformanceApi) {
-      const entries = getPerformance();
 
-      if (entries.length < timingSamples) {
-        if (!waitRequestsCompletion) {
-          waitRequestsCompletion = setInterval(checkRequestsCompleted, 1000);
-          console.log(`len: ${entries.length}`); // XXX
-        }
-        return;
-      } // else
+    const prepareNextExecution = () => {
+      // reset global stuff used by this function
       doneRequests = 0;
-      if (waitRequestsCompletion) {
-        clearInterval(waitRequestsCompletion);
-      }
+    };
+
+    if (useResourcesApi) {
+      const entries = getPerformanceEntries(timingSamples);
 
       if (!existingUserAvg) {
+        // batch of requests for existingUser done
+        console.log(entries);
         existingUserAvg = returnAvg(entries, timingSamples);
+        prepareNextExecution();
+        return;
       } else {
-        invalidUserAvg = returnAvg(entries.slice(timingSamples), timingSamples);
+        // batch of requests for invalidUser done
+        console.log(entries);
+        invalidUserAvg = returnAvg(entries, timingSamples);
       }
     } else {
+      // not using resources API
+
       if (!existingUserAvg) {
         existingUserAvg = returnAvg(timingExistingUser, timingSamples);
-      } else {
+        prepareNextExecution();
+        return;
+      } else if (timingInvalidUser.length >= timingSamples) {
         invalidUserAvg = returnAvg(timingInvalidUser, timingSamples);
       }
     }
-    if (existingUserAvg && invalidUserAvg) {
-      const delta = existingUserAvg - invalidUserAvg;
-      console.log(delta);
-    }
+
+    // Will run either using resources API or not using it
+    prepareNextExecution();
+    const delta = existingUserAvg - invalidUserAvg;
+    console.log(timingExistingUser.length);
+    console.log(delta);
   };
 
   const fire = (user, storeTiming) => {
@@ -156,7 +141,7 @@ function getTimingSamples(usePerformanceApi) {
         sendApiLogin(
           user,
           passwords[i],
-          usePerformanceApi,
+          useResourcesApi,
           checkRequestsCompleted,
           storeTiming
         );
@@ -165,14 +150,22 @@ function getTimingSamples(usePerformanceApi) {
     }
   };
 
-  //TODO check performance support
-  initPerformance();
+  // checkSupport returns false if resourcesApi is not supported
+  if (useResourcesApi) useResourcesApi = checkSupport();
+  if (useResourcesApi) {
+    initPerformance();
+  }
 
   fire("tom.mharres@gmail.com", timingExistingUser);
 
-  // Wait until all previous requests are given time to finish
-  //TODO: if done requests == 0
-  sleep(delayBetweenRequests * timingSamples).then(() => {
-    fire("invalidUser@1337", timingInvalidUser);
-  });
+  let eventTimerHandle = 0;
+  const requestWaiter = (fireCallback, fireArgs) => {
+    // Wait until all previous requests finish and fire callback when they do
+    if (!doneRequests) return;
+    fireCallback(...fireArgs);
+    clearInterval(eventTimerHandle)
+  };
+
+  const params = ["invalidUser@1337", timingInvalidUser];
+  setInterval();
 }

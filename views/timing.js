@@ -27,7 +27,7 @@ function checkSupport() {
   // from eslint docs: You may want to turn this rule off if
   // your code only touches objects with hardcoded keys
   const requiresOne = (depends) => {
-    depends.forEach((dependency) => {
+    return depends.some((dependency) => {
       // eslint-disable-next-line no-prototype-builtins
       if (PerformanceResourceTiming.prototype.hasOwnProperty(dependency)) {
         return true;
@@ -35,6 +35,7 @@ function checkSupport() {
     });
   };
 
+  // any of these can be used to get time calculation
   if (
     !requiresOne([
       "connectEnd",
@@ -48,11 +49,16 @@ function checkSupport() {
   ) {
     return false;
   }
+  if (!requiresOne(["responseStart", "responseEnd", "duration"])) {
+    return false;
+  }
+  return true;
 }
 
 function initPerformance() {
   // Create a getter which will inherit from PerformanceResourceTiming
   if (
+    // setting the prototype twice is erratic, verify if not set
     !Object.getOwnPropertyDescriptor(
       PerformanceResourceTiming.prototype,
       "getSystemLoadTime"
@@ -82,9 +88,15 @@ function initPerformance() {
   performance.clearResourceTimings();
 }
 
-function getPerformance() {
-  const entries = performance.getEntriesByType("resource").map((request) => {
-    return request.getSystemLoadTime;
+function getPerformanceEntries(amount) {
+  const entries = new Array(amount);
+  performance.getEntriesByType("resource").some((request, i) => {
+    if (i < amount) {
+      entries[i] = request.getSystemLoadTime;
+    } else {
+      return;
+    }
   });
+  performance.clearResourceTimings();
   return entries;
 }

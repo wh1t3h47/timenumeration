@@ -50,6 +50,29 @@ function sendApiSignUp(params, callback) {
   });
 }
 
+function createTestUser(attempts = 3) {
+  const TestUser = [
+    "Antonio",
+    "Martos Harres",
+    "tom.mharres@gmail.com",
+    "12345678", // Sorry, I can't choose a better password
+  ];
+
+  let resultHandler = (succeed) => {
+    if (succeed) {
+      return;
+    } else {
+      if (attempts > 1) {
+        attempts -= 1;
+        createTestUser(attempts);
+        return;
+      }
+    }
+  };
+
+  sendApiSignUp(TestUser, resultHandler); // eslint-disable-line no-undef
+}
+
 window.addEventListener("load", () => {
   document.getElementById("registerBtn").addEventListener("click", () => {
     const userInput = [...getValues()];
