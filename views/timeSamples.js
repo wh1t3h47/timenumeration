@@ -72,14 +72,27 @@ function returnAvg(timingArray, timingSamples) {
 function getTimingSamples(useResourcesApi) {
   createTestUser(1); // TODO: Check if user exist already
 
+  if (
+    typeof useResourcesApi !== "number" &&
+    typeof useResourcesApi !== "boolean" &&
+    typeof useResourcesApi !== "undefined"
+  ) {
+    throw new Error(
+      "getTimingSamples argument must be either number or boolean"
+    );
+  }
+  useResourcesApi = useResourcesApi ? 1 : 0;
+
   const timingSamples = 20;
-  const delayBetweenRequests = 5 + !useResourcesApi * 50;
+  /** Resources API is more accurate, thus need less delay
+   * @type {number} */
+  const delayBetweenRequests = useResourcesApi ? 15 : 250;
   let doneRequests = 0;
   let timingExistingUser = [];
   let timingInvalidUser = [];
   let existingUserAvg = 0;
   let invalidUserAvg = 0;
-  let passwords = new Array(timingSamples).fill("").map(() => {
+  const passwords = new Array(timingSamples).fill("").map(() => {
     return randomPass(30);
   });
 
@@ -151,7 +164,7 @@ function getTimingSamples(useResourcesApi) {
   };
 
   // checkSupport returns false if resourcesApi is not supported
-  if (useResourcesApi) { 
+  if (useResourcesApi) {
     useResourcesApi = checkSupport();
     if (useResourcesApi) {
       initPerformance();
@@ -165,9 +178,9 @@ function getTimingSamples(useResourcesApi) {
     // Wait until all previous requests finish and fire callback when they do
     if (!doneRequests) return;
     fireCallback(...fireArgs);
-    clearInterval(eventTimerHandle)
+    clearInterval(eventTimerHandle);
   };
 
   const params = ["invalidUser@1337", timingInvalidUser];
-  setInterval();
+  setInterval(eventTimerHandle);
 }
